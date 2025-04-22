@@ -22,25 +22,32 @@ app.post("/apps/comments/save", async (req, res) => {
   const { image_id, comment } = req.body;
 
   const mutation = `
-    mutation {
-      metaobjectCreate(metaobject: {
-        type: "image_comment",
-        fields: [
-          { key: "image_id", value: "${image_id}" },
-          { key: "comment_text", value: "${comment}" },
-          { key: "timestamp", value: "${new Date().toISOString()}" }
-        ]
-      }) {
-        metaobject {
-          id
-        }
-        userErrors {
-          field
-          message
+  mutation {
+    metaobjectCreate(metaobject: {
+      type: "image_comment",
+      handle: "comment-${Date.now()}",
+      fields: [
+        { key: "image_id", value: "${image_id}" },
+        { key: "comment_text", value: """${comment}""" },
+        { key: "timestamp", value: "${new Date().toISOString()}" }
+      ],
+      capabilities: {
+        publishable: {
+          status: DRAFT
         }
       }
+    }) {
+      metaobject {
+        id
+      }
+      userErrors {
+        field
+        message
+      }
     }
-  `;
+  }
+`;
+
 
   try {
     const response = await axios.post(graphqlEndpoint, { query: mutation }, { headers });
@@ -71,7 +78,7 @@ app.get("/apps/comments/get", async (req, res) => {
     const response = await axios.post(graphqlEndpoint, { query }, { headers });
     const nodes = response.data.data.metaobjects.nodes;
     const comments = nodes.map(node => {
-      const text = node.fields.find(f => f.key === "comment_text")?.value;
+      const text = node.fields.find(f => f.key === "image_comment.comment_text")?.value;
       return text;
     });
     res.json({ comments });
