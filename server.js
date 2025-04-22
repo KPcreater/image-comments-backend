@@ -52,7 +52,7 @@ app.post("/apps/comments/save", async (req, res) => {
 app.get("/apps/comments/get", async (req, res) => {
   const { image_id } = req.query;
 
-  const query = \`
+  const query = `
     query {
       metaobjects(type: "image_comment", first: 100, query: "image_id:${image_id}") {
         nodes {
@@ -63,7 +63,7 @@ app.get("/apps/comments/get", async (req, res) => {
         }
       }
     }
-  \`;
+  `;
 
   try {
     const response = await axios.post(graphqlEndpoint, { query }, { headers });
