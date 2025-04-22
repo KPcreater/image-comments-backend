@@ -178,57 +178,38 @@ app.get("/apps/comments/get", async (req, res) => {
 
   try {
     const response = await axios.post(graphqlEndpoint, { query, variables }, { headers });
+    const responseData = response.data;
 
-    const responseData = response.data; // Keep reference
+    // ... (add check for responseData.errors here as before) ...
 
-    // Check for top-level GraphQL errors
-     if (responseData.errors) {
-      console.error("GraphQL Errors (Get):", JSON.stringify(responseData.errors, null, 2));
-      // Check for specific filter error
-       if (responseData.errors.some(e => e.message?.includes('filter is not supported'))) {
-           console.error(">>> Filtering Error: Make sure the 'image_id' field in the 'image_comment' Metaobject Definition is set as 'Use field as filter' in Shopify Admin! <<<");
-           return res.status(400).json({
-             error: "Failed to get comments: Filtering not enabled for image_id.",
-             details: responseData.errors
-           });
-       }
-      return res.status(400).json({
-        error: "Failed to get comments due to GraphQL errors.",
-        details: responseData.errors
-      });
-    }
-
-    // Safely access nodes and map comments
     const nodes = responseData?.data?.metaobjects?.nodes || [];
-    const comments = nodes.map(node => {
-      // Correctly find the 'comment_text' field by its key
-      const commentField = node.fields.find(f => f.key === "comment_text");
-      return commentField ? commentField.value : null; // Return the value if found
-    }).filter(comment => comment !== null); // Filter out any potential nulls if a node was missing the field
+    console.log(`---> Found ${nodes.length} metaobject nodes for image_id: ${image_id}`); // Log how many nodes
 
-    console.log(`Found ${comments.length} comments for image_id: ${image_id}`);
-    res.json({ comments }); // Send just the array of comment strings
+    const comments = nodes.map((node, index) => {
+        // *** ADD THIS LOGGING ***
+        console.log(`---> Processing Node ${index} Fields:`, JSON.stringify(node.fields, null, 2));
 
-  } catch (err) {
-    console.error("--- Error Getting Comments ---");
-    console.error("Request Query:", req.query); // Log what was received
-    console.error("Axios/Network Error (Get):", err.message);
-     if (err.response) {
-      console.error("Shopify Error Response Status (Get):", err.response.status);
-      console.error("Shopify Error Response Data (Get):", JSON.stringify(err.response.data, null, 2));
-       res.status(err.response.status || 500).json({
-         error: "Error communicating with Shopify API while fetching.",
-         details: err.response.data
-        });
-    } else if (err.request) {
-       console.error("No response received (Get):", err.request);
-       res.status(500).json({ error: "Internal Server Error: No response from Shopify API." });
-    } else {
-      console.error('Error setting up request (Get):', err.message);
-      res.status(500).json({ error: "Internal Server Error.", details: err.message });
-    }
-     console.error("--- End Error Getting Comments ---");
-  }
+        const commentField = node.fields.find(f => f.key === "comment_text"); // Use the EXACT key from Shopify Admin here
+
+        if (!commentField) {
+            console.log(`---> Node ${index}: Field with key "comment_text" NOT FOUND.`); // Log if not found
+        } else {
+             console.log(`---> Node ${index}: Field "comment_text" FOUND. Value: "${commentField.value}"`); // Log if found
+        }
+
+        return commentField ? commentField.value : null;
+    }); // Removed the .filter() temporarily to see nulls if they occur
+
+    console.log(`---> Mapped comments (before filtering):`, comments);
+
+    // Filter out nulls before sending the response
+    const filteredComments = comments.filter(comment => comment !== null);
+
+    res.json({ comments: filteredComments }); // Send the filtered array
+
+} catch (err) {
+  // ... (existing error handling) ...
+}
 });
 
 // --- Start Server ---
