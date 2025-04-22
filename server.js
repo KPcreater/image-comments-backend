@@ -19,7 +19,7 @@ const headers = {
 app.post("/apps/comments/save", async (req, res) => {
   const { image_id, comment } = req.body;
 
-  const mutation = \`
+  const mutation = `
     mutation {
       metaobjectCreate(metaobject: {
         type: "image_comment",
@@ -38,7 +38,7 @@ app.post("/apps/comments/save", async (req, res) => {
         }
       }
     }
-  \`;
+  `;
 
   try {
     const response = await axios.post(graphqlEndpoint, { query: mutation }, { headers });
